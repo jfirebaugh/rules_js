@@ -1,0 +1,12 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@aspect_rules_js.npm.npm//:node_modules.bzl", "node_modules")
+
+node_modules()
+
+js_binary(
+    name = "bin",
+    entry_point = "main.js",
+    deps = [
+        "@npm//chalk",
+    ],
+)

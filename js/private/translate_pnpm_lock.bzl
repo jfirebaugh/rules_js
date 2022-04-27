@@ -147,11 +147,16 @@ _ATTRS = {
 }
 
 def _process_lockfile(rctx):
-    json_lockfile_path = rctx.path("pnpm-lock.json")
-    result = rctx.execute([yq_path(rctx), "-o=json", ".", rctx.path(rctx.attr.pnpm_lock)])
-    if result.return_code != 0:
-        fail("failed to convert pnpm lockfile to json: %s" % result.stderr)
-    rctx.file(json_lockfile_path, result.stdout)
+    if paths.split_extension(rctx.attr.pnpm_lock.name)[-1] in [".yml", ".yaml"]:
+        json_lockfile_path = rctx.path("pnpm-lock.json")
+        result = rctx.execute([yq_path(rctx), "-o=json", ".", rctx.path(rctx.attr.pnpm_lock)])
+        if result.return_code != 0:
+            fail("failed to convert pnpm lockfile to json: %s" % result.stderr)
+        rctx.file(json_lockfile_path, result.stdout)
+    elif paths.split_extension(rctx.attr.pnpm_lock.name)[-1] in [".json"]:
+        json_lockfile_path = rctx.path(rctx.attr.pnpm_lock)
+    else:
+        fail("Expected lockfile path %s to be yaml or json" % rctx.attr.pnpm_lock)
 
     json_lockfile = json.decode(rctx.read(json_lockfile_path))
     return translate_to_transitive_closure(json_lockfile, rctx.attr.prod, rctx.attr.dev, rctx.attr.no_optional)
