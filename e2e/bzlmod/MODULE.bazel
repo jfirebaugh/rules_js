@@ -18,3 +18,5 @@ npm.pnpm_lock(
 )
 
 use_repo(npm, "npm")
+use_repo(npm, "npm__chalk__5.0.1")
+use_repo(npm, "npm__chalk__5.0.1__links")

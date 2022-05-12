@@ -275,6 +275,93 @@ def _fp_link_path(root_path, import_path, rel_path):
         fail("root bazel package first party dep not supported")
     return fp_link_path
 
+# FIXME:
+# buildifier: disable=function-docstring
+def npm_imports(lockfile, npm_repo_name, attr):
+    result = []
+
+    # root path is the directory of the pnpm_lock file
+    root_path = attr.pnpm_lock.package
+
+    importers = lockfile.get("importers")
+    if not importers:
+        fail("expected importers in processed lockfile")
+
+    packages = lockfile.get("packages")
+    if not packages:
+        fail("expected packages in processed lockfile")
+
+    for (i, v) in enumerate(packages.items()):
+        (package, package_info) = v
+        name = package_info.get("name")
+        pnpm_version = package_info.get("pnpmVersion")
+        deps = package_info.get("dependencies")
+        optional_deps = package_info.get("optionalDependencies")
+        dev = package_info.get("dev")
+        optional = package_info.get("optional")
+        has_bin = package_info.get("hasBin")
+        requires_build = package_info.get("requiresBuild")
+        integrity = package_info.get("integrity")
+        transitive_closure = package_info.get("transitiveClosure")
+
+        if attr.prod and dev:
+            # when prod attribute is set, skip devDependencies
+            continue
+        if attr.dev and not dev:
+            # when dev attribute is set, skip (non-dev) dependencies
+            continue
+        if attr.no_optional and optional:
+            # when no_optional attribute is set, skip optionalDependencies
+            continue
+
+        if not attr.no_optional:
+            deps = dicts.add(optional_deps, deps)
+
+        friendly_name = pnpm_utils.friendly_name(name, pnpm_utils.strip_peer_dep_version(pnpm_version))
+
+        patches = attr.patches.get(name, [])[:]
+        patches.extend(attr.patches.get(friendly_name, []))
+
+        patch_args = attr.patch_args.get(name, [])[:]
+        patch_args.extend(attr.patch_args.get(friendly_name, []))
+
+        custom_postinstall = attr.custom_postinstalls.get(name)
+        if not custom_postinstall:
+            custom_postinstall = attr.custom_postinstalls.get(friendly_name)
+        elif attr.custom_postinstalls.get(friendly_name):
+            custom_postinstall = "%s && %s" % (custom_postinstall, attr.custom_postinstalls.get(friendly_name))
+
+        repo_name = "%s__%s" % (npm_repo_name, pnpm_utils.bazel_name(name, pnpm_version))
+
+        link_paths = []
+
+        for import_path, importer in importers.items():
+            dependencies = importer.get("dependencies")
+            if type(dependencies) != "dict":
+                fail("expected dict of dependencies in processed importer '%s'" % import_path)
+            for dep_package, dep_version in dependencies.items():
+                if not dep_version.startswith("link:") and package == pnpm_utils.pnpm_name(dep_package, dep_version):
+                    # this package is a direct dependency at this import path
+                    link_paths.append(import_path)
+
+        run_lifecycle_hooks = requires_build and attr.run_lifecycle_hooks and name not in attr.lifecycle_hooks_exclude and friendly_name not in attr.lifecycle_hooks_exclude
+
+        result.append({
+            "integrity": integrity,
+            "link_paths": link_paths,
+            "custom_postinstall": custom_postinstall,
+            "deps": deps,
+            "patch_args": patch_args,
+            "patches": patches,
+            "run_lifecycle_hooks": run_lifecycle_hooks,
+            "transitive_closure": transitive_closure,
+            "name": repo_name,
+            "package": name,
+            "pnpm_version": pnpm_version,
+            "root_path": root_path,
+        })
+    return result
+
 def _impl(rctx):
     if rctx.attr.prod and rctx.attr.dev:
         fail("prod and dev attributes cannot both be set to true")
