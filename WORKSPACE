@@ -85,6 +85,7 @@ npm_translate_lock(
         "//examples/npm_package/libs/lib_a:package.json",
         "//examples/npm_package/packages/pkg_a:package.json",
         "//examples/npm_package/packages/pkg_b:package.json",
+        "//examples/npm_package/packages/pkg_c/data2:package.json",
         "//examples/webpack_cli:package.json",
         "//js/private/coverage/bundle:package.json",
         "//js/private/image:package.json",

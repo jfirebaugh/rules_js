@@ -24,9 +24,12 @@ npm_package(
 npm_package(
     name = "pkg_c2",
     srcs = [
-        "data2/package.json",
-        "data2/pkg-c.json",
         "src/index.js",
+        "//examples/npm_package/packages/pkg_c/data2:package.json",
+        "//examples/npm_package/packages/pkg_c/data2:pkg-c.json",
+    ],
+    data = [
+        "//examples/npm_package/packages/pkg_c/data2:node_modules",
     ],
     include_runfiles = False,
     package = "@mycorp/pkg-c2",
