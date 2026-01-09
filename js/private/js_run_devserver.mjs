@@ -544,6 +544,7 @@ async function main(args, sandbox) {
                     // note: ignoring error - if this write to stdin fails,
                     // it's probably okay. Can add error handling later if needed
                     proc.stdin.write(chunk, resolve)
+                    proc.stdin.write('\n')
                 })
             } catch (e) {
                 console.error(
